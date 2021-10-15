@@ -580,6 +580,7 @@ else
 				port=$(grep '^port ' /etc/openvpn/server/server.conf | cut -d " " -f 2)
 				protocol=$(grep '^proto ' /etc/openvpn/server/server.conf | cut -d " " -f 2)
 				lan_net=$(grep '^#lan_net ' /etc/openvpn/server/server.conf | cut -d " " -f 2)
+				[[ -z "$lan_net" ]] && lan_net="10.8.0.0/24"
 				if systemctl is-active --quiet firewalld.service; then
 					ip=$(firewall-cmd --direct --get-rules ipv4 nat POSTROUTING | grep "\-s $lan_net '!' -d $lan_net" | grep -oE '[^ ]+$')
 					# Using both permanent and not permanent rules to avoid a firewalld reload.
