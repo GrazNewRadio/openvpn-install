@@ -91,15 +91,19 @@ function yn_prompt {
       [Yy][Ee][Ss] ) return 1;;
       [Nn] ) ;&
       [Nn][Oo] ) return 0;;
-      *) if [[ $2 == "" ]]; then
-           echo "Please answer yes or no!"
-         elif [[ $2 == "y" ]] && [[ $yn == "" ]]; then
-           return 1
-         elif [[ $2 == "n" ]] && [[ $yn == "" ]]; then
-           return 0
-         else
-           echo "Please answer yes or no!"
-         fi;;
+      *)
+        if [[ $2 == "" ]]; then
+          echo "Please answer yes or no!"
+        elif [[ $2 == "y" ]] && [[ $yn == "" ]]; then
+	  echo "DEBUG Return 1"
+          return 1
+        elif [[ $2 == "n" ]] && [[ $yn == "" ]]; then
+	  echo "DEBUG Return 0"
+          return 0
+        else
+          echo "Please answer yes or no!"
+        fi
+	;;
     esac
   done
 }
@@ -218,13 +222,14 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 	echo
 	echo "What LAN IP Net should be used by OpenVPN?"
 	read -p "LAN Net [10.8.0.0/24]: " lan_net
-	until [[ -z "$lan_net" || "$lan_net" =~ ^((((10\.\b([01]?[0-9][0-9]?|2[0-4][0-9]|25[0-5]))|(172\.1[6-9])|(172\.2[0-9])|(172\.3[0-1])|(192\.168))\b(\.[01]?[0-9][0-9]?|2[0-4][0-9]|25[0-5]){2})\/([8-9]|[1-2][0-9]))$ ]]; do
-		echo "$port: invalid LAN Net; Valid Network Prefix: 8-29; Valid IP Ranges: 10.0.0.0/8, 172.16.0.0/12 and 192.168.0.0/16"
+	echo "DEBUG lan_net: $lan_net"
+	until [[ -z "$lan_net" || "$lan_net" =~ ^((((10\.([01]?[0-9][0-9]?|2[0-4][0-9]|25[0-5]))|(172\.1[6-9])|(172\.2[0-9])|(172\.3[0-1])|(192\.168))(\.[01]?[0-9][0-9]?|2[0-4][0-9]|25[0-5]){2})\/([8-9]|[1-2][0-9]))$ ]]; do
+		echo "$lan_net: invalid LAN Net; Valid Network Prefix: 8-29; Valid IP Ranges: 10.0.0.0/8, 172.16.0.0/12 and 192.168.0.0/16"
 		read -p "LAN Net [10.8.0.0/24]: " lan_net
 	done
 	[[ -z "$lan_net" ]] && lan_net="10.8.0.0/24"
 	# Split by delimiter, modified from source: https://stackoverflow.com/a/5257398/8211796
-	lan_net_arr=(${IN//\// })
+	lan_net_arr=(${lan_net//\// })
 	lan_ip="${lan_net_arr[0]}"
 	lan_netprefix="${lan_net_arr[1]}"
 	lan_netmask=$(netprefix_to_netmask "$lan_netprefix")
