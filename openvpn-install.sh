@@ -223,6 +223,12 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 		internet_access=0
 	fi
 	echo "DEBUG internet_access: $internet_access"
+	if [[ yn_prompt "Should the client use a custom hostname for the OpenVPN Server?[y/N]" "n" ]]; then
+		read -p "Hostname: " server_hostname
+	else
+		server_hostname="$ip"
+	fi
+	echo "DEBUG server_hostname: $server_hostname"
 	echo
 	echo "Enter a name for the first client:"
 	read -p "Name [client]: " unsanitized_client
@@ -448,7 +454,7 @@ WantedBy=multi-user.target" >> /etc/systemd/system/openvpn-iptables.service
 	echo "client
 dev tun
 proto $protocol
-remote $ip $port
+remote $server_hostname $port
 resolv-retry infinite
 nobind
 persist-key
