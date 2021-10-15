@@ -79,6 +79,10 @@ TUN needs to be enabled before running this installer."
 	exit
 fi
 
+# Usage:  $1: Prompt message(including [y/n]) with correct capitalization
+#         $2: optional, "y" or "n" which defines the default behaviour
+# Return: 1 - answered yes
+#         0 - answered no
 function yn_prompt {
   while true; do
     read -p "${1}" yn
