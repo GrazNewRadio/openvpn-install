@@ -229,7 +229,7 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 	lan_netprefix="${lan_net_arr[1]}"
 	lan_netmask=$(netprefix_to_netmask "$lan_netprefix")
 	# use netprefix_to_netmask and seperate lan ip, netmask and netprefix into vars
-	if [[ yn_prompt "Should the OpenVPN Server provide internet access?[Y/n]" "y" -eq 1 ]]; then
+	if [[ $(yn_prompt "Should the OpenVPN Server provide internet access?[Y/n]" "y") -eq 1 ]]; then
 		internet_access=1
 		echo
 		echo "Select a DNS server for the clients:"
@@ -248,7 +248,7 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 		internet_access=0
 	fi
 	echo "DEBUG internet_access: $internet_access"
-	if [[ yn_prompt "Should the client use a custom hostname for the OpenVPN Server?[y/N]" "n" -eq 1 ]]; then
+	if [[ $(yn_prompt "Should the client use a custom hostname for the OpenVPN Server?[y/N]" "n") -eq 1 ]]; then
 		read -p "Hostname: " server_hostname
 	else
 		server_hostname="$ip"
