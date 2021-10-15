@@ -79,6 +79,27 @@ TUN needs to be enabled before running this installer."
 	exit
 fi
 
+function yn_prompt {
+  while true; do
+    read -p "${1}" yn
+    case $yn in
+      [Yy] ) ;&
+      [Yy][Ee][Ss] ) return 1;;
+      [Nn] ) ;&
+      [Nn][Oo] ) return 0;;
+      *) if [[ $2 == "" ]]; then
+           echo "Please answer yes or no!"
+         elif [[ $2 == "y" ]] && [[ $yn == "" ]]; then
+           return 1
+         elif [[ $2 == "n" ]] && [[ $yn == "" ]]; then
+           return 0
+         else
+           echo "Please answer yes or no!"
+         fi;;
+    esac
+  done
+}
+
 new_client () {
 	# Generates the custom client.ovpn
 	{
@@ -181,19 +202,27 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 		read -p "Port [1194]: " port
 	done
 	[[ -z "$port" ]] && port="1194"
+	# ask if openvpn should provide internet access or only lan access
 	echo
-	echo "Select a DNS server for the clients:"
-	echo "   1) Current system resolvers"
-	echo "   2) Google"
-	echo "   3) 1.1.1.1"
-	echo "   4) OpenDNS"
-	echo "   5) Quad9"
-	echo "   6) AdGuard"
-	read -p "DNS server [1]: " dns
-	until [[ -z "$dns" || "$dns" =~ ^[1-6]$ ]]; do
-		echo "$dns: invalid selection."
+	if [[ yn_prompt "Should the OpenVPN Server provide internet access?[Y/n]" "y" ]]; then
+		internet_access=1
+		echo
+		echo "Select a DNS server for the clients:"
+		echo "   1) Current system resolvers"
+		echo "   2) Google"
+		echo "   3) 1.1.1.1"
+		echo "   4) OpenDNS"
+		echo "   5) Quad9"
+		echo "   6) AdGuard"
 		read -p "DNS server [1]: " dns
-	done
+		until [[ -z "$dns" || "$dns" =~ ^[1-6]$ ]]; do
+			echo "$dns: invalid selection."
+			read -p "DNS server [1]: " dns
+		done
+	else
+		internet_access=0
+	fi
+	echo "DEBUG internet_access: $internet_access"
 	echo
 	echo "Enter a name for the first client:"
 	read -p "Name [client]: " unsanitized_client
@@ -277,51 +306,55 @@ auth SHA512
 tls-crypt tc.key
 topology subnet
 server 10.8.0.0 255.255.255.0" > /etc/openvpn/server/server.conf
-	# IPv6
-	if [[ -z "$ip6" ]]; then
-		echo 'push "redirect-gateway def1 bypass-dhcp"' >> /etc/openvpn/server/server.conf
+	if [[ $internet_access ]]; then
+		# IPv6
+		if [[ -z "$ip6" ]]; then
+			echo 'push "redirect-gateway def1 bypass-dhcp"' >> /etc/openvpn/server/server.conf
+		else
+			echo 'server-ipv6 fddd:1194:1194:1194::/64' >> /etc/openvpn/server/server.conf
+			echo 'push "redirect-gateway def1 ipv6 bypass-dhcp"' >> /etc/openvpn/server/server.conf
+		fi
+		echo 'ifconfig-pool-persist ipp.txt' >> /etc/openvpn/server/server.conf
+		# DNS
+		case "$dns" in
+			1|"")
+				# Locate the proper resolv.conf
+				# Needed for systems running systemd-resolved
+				if grep -q '^nameserver 127.0.0.53' "/etc/resolv.conf"; then
+					resolv_conf="/run/systemd/resolve/resolv.conf"
+				else
+					resolv_conf="/etc/resolv.conf"
+				fi
+				# Obtain the resolvers from resolv.conf and use them for OpenVPN
+				grep -v '^#\|^;' "$resolv_conf" | grep '^nameserver' | grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}' | while read line; do
+					echo "push \"dhcp-option DNS $line\"" >> /etc/openvpn/server/server.conf
+				done
+			;;
+			2)
+				echo 'push "dhcp-option DNS 8.8.8.8"' >> /etc/openvpn/server/server.conf
+				echo 'push "dhcp-option DNS 8.8.4.4"' >> /etc/openvpn/server/server.conf
+			;;
+			3)
+				echo 'push "dhcp-option DNS 1.1.1.1"' >> /etc/openvpn/server/server.conf
+				echo 'push "dhcp-option DNS 1.0.0.1"' >> /etc/openvpn/server/server.conf
+			;;
+			4)
+				echo 'push "dhcp-option DNS 208.67.222.222"' >> /etc/openvpn/server/server.conf
+				echo 'push "dhcp-option DNS 208.67.220.220"' >> /etc/openvpn/server/server.conf
+			;;
+			5)
+				echo 'push "dhcp-option DNS 9.9.9.9"' >> /etc/openvpn/server/server.conf
+				echo 'push "dhcp-option DNS 149.112.112.112"' >> /etc/openvpn/server/server.conf
+			;;
+			6)
+				echo 'push "dhcp-option DNS 94.140.14.14"' >> /etc/openvpn/server/server.conf
+				echo 'push "dhcp-option DNS 94.140.15.15"' >> /etc/openvpn/server/server.conf
+			;;
+		esac
 	else
-		echo 'server-ipv6 fddd:1194:1194:1194::/64' >> /etc/openvpn/server/server.conf
-		echo 'push "redirect-gateway def1 ipv6 bypass-dhcp"' >> /etc/openvpn/server/server.conf
+		echo "DEBUG no internet access configured"
 	fi
-	echo 'ifconfig-pool-persist ipp.txt' >> /etc/openvpn/server/server.conf
-	# DNS
-	case "$dns" in
-		1|"")
-			# Locate the proper resolv.conf
-			# Needed for systems running systemd-resolved
-			if grep -q '^nameserver 127.0.0.53' "/etc/resolv.conf"; then
-				resolv_conf="/run/systemd/resolve/resolv.conf"
-			else
-				resolv_conf="/etc/resolv.conf"
-			fi
-			# Obtain the resolvers from resolv.conf and use them for OpenVPN
-			grep -v '^#\|^;' "$resolv_conf" | grep '^nameserver' | grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}' | while read line; do
-				echo "push \"dhcp-option DNS $line\"" >> /etc/openvpn/server/server.conf
-			done
-		;;
-		2)
-			echo 'push "dhcp-option DNS 8.8.8.8"' >> /etc/openvpn/server/server.conf
-			echo 'push "dhcp-option DNS 8.8.4.4"' >> /etc/openvpn/server/server.conf
-		;;
-		3)
-			echo 'push "dhcp-option DNS 1.1.1.1"' >> /etc/openvpn/server/server.conf
-			echo 'push "dhcp-option DNS 1.0.0.1"' >> /etc/openvpn/server/server.conf
-		;;
-		4)
-			echo 'push "dhcp-option DNS 208.67.222.222"' >> /etc/openvpn/server/server.conf
-			echo 'push "dhcp-option DNS 208.67.220.220"' >> /etc/openvpn/server/server.conf
-		;;
-		5)
-			echo 'push "dhcp-option DNS 9.9.9.9"' >> /etc/openvpn/server/server.conf
-			echo 'push "dhcp-option DNS 149.112.112.112"' >> /etc/openvpn/server/server.conf
-		;;
-		6)
-			echo 'push "dhcp-option DNS 94.140.14.14"' >> /etc/openvpn/server/server.conf
-			echo 'push "dhcp-option DNS 94.140.15.15"' >> /etc/openvpn/server/server.conf
-		;;
-	esac
-	echo "keepalive 10 120
+echo "keepalive 10 120
 cipher AES-256-CBC
 user nobody
 group $group_name
