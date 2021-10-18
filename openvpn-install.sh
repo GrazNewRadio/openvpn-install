@@ -113,7 +113,7 @@ function yn_prompt {
 # Usage: $1: 0 to 32, sane network prefix range: 8 to 29
 netprefix_to_netmask() {
     value=$(( 0xffffffff ^ ((1 << (32 - $1)) - 1) ))
-    netmask="$(( (value >> 24) & 0xff )).$(( (value >> 16) & 0xff )).$(( (value >> 8) & 0xff )).$(( value & 0xff ))"
+    echo "$(( (value >> 24) & 0xff )).$(( (value >> 16) & 0xff )).$(( (value >> 8) & 0xff )).$(( value & 0xff ))"
 }
 
 new_client () {
@@ -233,6 +233,9 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 	lan_ip="${lan_net_arr[0]}"
 	lan_netprefix="${lan_net_arr[1]}"
 	lan_netmask=$(netprefix_to_netmask "$lan_netprefix")
+	echo "DEBUG lan_ip: $lan_ip"
+	echo "DEBUG lan_netprefix: $lan_netprefix"
+	echo "DEBUG lan_netmask: $lan_netmask"
 	# use netprefix_to_netmask and seperate lan ip, netmask and netprefix into vars
 	if [[ $(yn_prompt "Should the OpenVPN Server provide internet access?[Y/n]" "y") -eq 1 ]]; then
 		internet_access=1
