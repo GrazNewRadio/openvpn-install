@@ -268,7 +268,7 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 	echo
 	echo "OpenVPN installation is ready to begin."
 	# Install a firewall if firewalld or iptables are not already available
-	if ! systemctl is-active --quiet firewalld.service && ! hash iptables 2>/dev/null; then
+	if systemctl is-active --quiet firewalld.service || hash iptables 2>/dev/null; then
 		if [[ "$os" == "centos" || "$os" == "fedora" ]]; then
 			firewall="firewalld"
 			# We don't want to silently enable firewalld, so we give a subtle warning
@@ -279,6 +279,7 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 			firewall="iptables"
 		fi
 	fi
+	echo "DEBUG firewall: $firewall"
 	read -n1 -r -p "Press any key to continue..."
 	# If running inside a container, disable LimitNPROC to prevent conflicts
 	if systemd-detect-virt -cq; then
