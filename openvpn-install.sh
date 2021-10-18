@@ -400,7 +400,7 @@ server $lan_ip $lan_netmask" > /etc/openvpn/server/server.conf
 		echo "DEBUG no internet access configured"
 	fi
 echo "keepalive 10 120
-cipher AES-256-CBC
+cipher AES-256-GCM
 user nobody
 group $group_name
 persist-key
@@ -500,7 +500,7 @@ persist-key
 persist-tun
 remote-cert-tls server
 auth SHA512
-cipher AES-256-CBC
+cipher AES-256-GCM
 ignore-unknown-option block-outside-dns
 block-outside-dns
 verb 3" > /etc/openvpn/server/client-common.txt
