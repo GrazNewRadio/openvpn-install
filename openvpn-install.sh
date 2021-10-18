@@ -351,7 +351,7 @@ tls-crypt tc.key
 topology subnet
 #lan_net $lan_net
 server $lan_ip $lan_netmask" > /etc/openvpn/server/server.conf
-	if [[ $internet_access ]]; then
+	if [[ $internet_access -eq 1 ]]; then
 		# IPv6
 		if [[ -z "$ip6" ]]; then
 			echo 'push "redirect-gateway def1 bypass-dhcp"' >> /etc/openvpn/server/server.conf
