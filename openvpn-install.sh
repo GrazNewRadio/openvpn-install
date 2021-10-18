@@ -255,6 +255,10 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 	echo "DEBUG internet_access: $internet_access"
 	if [[ $(yn_prompt "Should the client use a custom hostname for the OpenVPN Server?[y/N]" "n") -eq 1 ]]; then
 		read -p "Hostname: " server_hostname
+		until [[ -z "$server_hostname" ]]; do
+			echo "$server_hostname: no hostname specified."
+			read -p "Hostname: " server_hostname
+		done
 	else
 		server_hostname="$ip"
 	fi
